@@ -1,0 +1,61 @@
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+import os
+
+# Your API token
+API_TOKEN = "7916065435:AAE33fXbmXVkzIV2IYVIGFSTVvt6ROAL9Tg"
+
+# Folder where PDF files are stored
+PDF_FOLDER = "pdfs"
+
+# Function to start the bot
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    welcome_text = (
+        "Welcome to 2B Classes Bot!\n\n"
+        "📚 Access chapter-wise PDFs for your studies.\n\n"
+        "Use /chapters to view all available chapters."
+    )
+    await update.message.reply_text(welcome_text)
+
+# Function to list all chapters
+async def list_chapters(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Dynamically create buttons for each chapter
+    keyboard = [
+        [InlineKeyboardButton(f"Chapter {i+1}", callback_data=f"chapter_{i+1}")]
+        for i in range(26)
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("Select a chapter to download its PDF:", reply_markup=reply_markup)
+
+# Function to handle chapter selection and send the respective PDF
+async def send_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    chapter = query.data  # e.g., "chapter_1"
+    
+    # File path to the PDF
+    file_path = os.path.join(PDF_FOLDER, f"{chapter}.pdf")
+    
+    if os.path.exists(file_path):
+        await query.message.reply_document(open(file_path, "rb"), filename=f"{chapter}.pdf")
+        await query.answer(f"Sending {chapter} PDF...")
+    else:
+        await query.answer("Sorry, the PDF for this chapter is not available yet.")
+
+# Main function to run the bot
+def main():
+    # Initialize bot
+    app = ApplicationBuilder().token(API_TOKEN).build()
+
+    # Command handlers
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("chapters", list_chapters))
+
+    # Callback query handler
+    app.add_handler(CallbackQueryHandler(send_pdf))
+
+    # Run the bot
+    print("Bot is running...")
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
